@@ -1,4 +1,5 @@
 import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 
 
 class DTree:
@@ -91,7 +92,6 @@ class DTree:
 
     # Print the decision tree
     def print_tree(self, node, depth=0):
-        print(node)
         if isinstance(node, dict):
             print('%s[X%d < %.3f]' % ((depth*' ', (node['index']+1), node['value'])))
             self.print_tree(node['left'], depth + 1)
@@ -103,12 +103,14 @@ class DTree:
     def fit(self, X, y):
         train = pd.concat([X, y], axis=1)
         train = train.to_numpy()
+        self.train = train
         self.root = self.__get_split(train)
         self.__split(self.root, self.max_depth, self.min_size, 1)
         return self.root
 
-    # Make a prediction for a single item
     def predict_item(self, node, row):
+        self.node = node
+        self.row = row
         if row[node['index']] < node['value']:
             if isinstance(node['left'], dict):
                 return self.predict_item(node['left'], row)
@@ -120,20 +122,68 @@ class DTree:
             else:
                 return node['right']
 
-    # Make predictions
     def predict(self, X):
         test = X.to_numpy()
+        self.test = test
         predictions = list()
-        for row in test:
+        for row in self.test:
             prediction = self.predict_item(self.root, row)
             predictions.append(prediction)
-        return predictions
+        return(predictions)
 
-    # Calculate accuracy
-    def accuracy(self, actual, predicted):
-        act = actual.to_numpy()
-        correct = 0
-        for i in range(len(act)):
-            if act[i] == predicted[i]:
-                correct += 1
-        return correct / float(len(act)) * 100
+
+iris_data = pd.read_csv('https://gist.githubusercontent.com/netj/8836201/raw/6f9306ad21398ea43cba4f7d537619d0e07d5ae3/iris.csv')
+labelencoder = LabelEncoder()
+iris_data['variety'] = labelencoder.fit_transform(iris_data['variety'])
+train1 = iris_data.to_numpy()
+# print(train1)
+
+train = pd.read_csv('data/test.csv')
+target = 'Y'
+features = train.columns.drop(target)
+X = train[features]
+y = train[target]
+
+print(train)
+
+"""
+train = [[2.771244718, 1.784783929, 0],
+        [1.728571309, 1.169761413, 0],
+        [3.678319846, 2.81281357,  0],
+        [3.961043357, 2.61995032,  0],
+        [2.999208922, 2.209014212, 0],
+        [7.497545867, 3.162953546, 1],
+        [9.00220326,  3.339047188, 1],
+        [7.444542326, 0.476683375, 1],
+        [10.12493903, 3.234550982, 1],
+        [6.642287351, 3.319983761, 1]]
+"""
+
+tree = DTree(max_depth=2, min_size=1)
+clf = tree.fit(X, y)
+tree.print_tree(clf)
+
+test = train
+print(test)
+y_pred = tree.predict(test)
+print(y_pred)
+
+"""
+#  Predict with a stump
+train = train.to_numpy()
+stump = {'index': 0, 'right': 1, 'value': 6.642287351, 'left': 0}
+for row in train:
+    prediction = tree.predict(stump, row)
+    print('Expected=%d, Got=%d' % (row[-1], prediction))
+"""
+
+"""
+train = iris_data
+target = 4
+features = train.columns.drop(target)
+X = train[features]
+y = train[target]
+print(y)
+tree = DTree(max_depth=5, min_size=10)
+clf = tree.fit(X, y)
+"""
